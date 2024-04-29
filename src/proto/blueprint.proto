@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+// Message representing a single key-value pair.
+message KeyValuePair {
+    bytes key = 1;                     // Key as bytes
+    repeated uint32 value = 2;         // Value as a list of uint32 (closest to u16 in Rust)
+}
+
+// Message to store the entire HashMap.
+message Blueprint {
+    repeated KeyValuePair pairs = 1;   // Repeated field of key-value pairs
+}
