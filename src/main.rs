@@ -41,11 +41,14 @@ fn main() {
 
     log::info!("Loaded {} blueprint snapshots", blueprint_snapshot_count);
 
-    // Compute the average
+    // Compute the normalized average
     let mut averaged_blueprint: HashMap<Vec<u8>, Vec<u16>> = HashMap::new();
     for (key, sums) in accumulator {
+        let total = sums.iter().sum::<u64>();
         let averages = sums.iter()
-            .map(|&sum| (sum / blueprint_snapshot_count) as u16)
+            .map(|&sum| {
+                ((sum * 10_000 / total)) as u16
+            })
             .collect();
         averaged_blueprint.insert(key, averages);
     }
