@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.38"
 log = "0.4.21"
+num_cpus = "1.16.0"
 prost = "0.12.4"
 prost-types = "0.12.4"
 rayon = "1.10.0"
