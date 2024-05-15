@@ -1,3 +1,4 @@
+// main.rs
 mod proto {
     include!("proto/build/_.rs");
 }
@@ -6,6 +7,7 @@ pub mod save;
 pub mod logger;
 
 use std::{collections::HashMap, fs, path::Path};
+use rayon::prelude::*;
 
 use load::load_blueprint_file;
 use logger::init_logger;
@@ -14,30 +16,44 @@ use crate::save::save_blueprint_file;
 
 fn main() {
     init_logger().expect("Failed to initialize logger");
-    let mut accumulator: HashMap<Vec<u8>, Vec<u64>> = HashMap::new();
     let imports_directory = Path::new("./imports");
-    let mut blueprint_snapshot_filepaths: Vec<String> = Vec::new();
-    for entry in fs::read_dir(imports_directory).unwrap() {
-        if let Ok(entry) = entry {
-            if entry.path().extension().and_then(std::ffi::OsStr::to_str) == Some("bin") {
-                let filepath = entry.path();
-                blueprint_snapshot_filepaths.push(filepath.to_str().unwrap().to_string())
-            }
-        }
-    }
+    let blueprint_snapshot_filepaths: Vec<String> = fs::read_dir(imports_directory)
+        .unwrap()
+        .filter_map(|entry| {
+            entry.ok().and_then(|e| {
+                let path = e.path();
+                if path.extension().and_then(std::ffi::OsStr::to_str) == Some("bin") {
+                    Some(path.to_str().unwrap().to_string())
+                } else {
+                    None
+                }
+            })
+        })
+        .collect();
 
     let blueprint_snapshot_count = blueprint_snapshot_filepaths.len() as u64;
 
-    for blueprint_snapshot_filepath in blueprint_snapshot_filepaths {
-        let blueprint = load_blueprint_file(&blueprint_snapshot_filepath);
-        log::info!("Blueprint has {} keys", blueprint.len());
-        for (key, values) in blueprint {
-            accumulator.entry(key).or_insert_with(|| vec![0; values.len()])
-                .iter_mut()
-                .zip(values.iter())
-                .for_each(|(acc, &val)| *acc += val as u64);
-        }
-    }
+    let accumulator: HashMap<Vec<u8>, Vec<u64>> = blueprint_snapshot_filepaths
+        .par_iter()
+        .map(|filepath| {
+            let blueprint: HashMap<Vec<u8>, Vec<u16>> = load_blueprint_file(filepath);
+            blueprint.into_iter().map(|(key, values)| {
+                let values_u64: Vec<u64> = values.into_iter().map(|v| v as u64).collect();
+                (key, values_u64)
+            }).collect::<HashMap<_, _>>()
+        })
+        .reduce(
+            || HashMap::new(),
+            |mut acc, blueprint| {
+                for (key, values) in blueprint {
+                    acc.entry(key).or_insert_with(|| vec![0; values.len()])
+                        .iter_mut()
+                        .zip(values.iter())
+                        .for_each(|(acc, &val)| *acc += val);
+                }
+                acc
+            },
+        );
 
     log::info!("Loaded {} blueprint snapshots", blueprint_snapshot_count);
 
