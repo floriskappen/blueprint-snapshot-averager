@@ -1,4 +1,5 @@
 use std::{collections::HashMap, fs::File, io::Read};
+use memmap2::MmapOptions;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -7,11 +8,9 @@ pub struct Data {
 }
 
 pub fn load_blueprint_file(filepath: &str) -> HashMap<Vec<u8>, Vec<u16>> {
-
-    let mut file = File::open(filepath).expect("error opening file");
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("error reading ifle v2");
-    let decoded: Data = bincode::deserialize(&buffer).unwrap();
+    let file = File::open(filepath).expect("error opening file");
+    let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
+    let decoded: Data = bincode::deserialize(&mmap[..]).unwrap();
 
     return decoded.map
 }
