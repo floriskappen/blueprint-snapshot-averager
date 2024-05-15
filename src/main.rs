@@ -1,7 +1,3 @@
-// main.rs
-mod proto {
-    include!("proto/build/_.rs");
-}
 pub mod load;
 pub mod save;
 pub mod logger;
@@ -13,6 +9,7 @@ use rayon::ThreadPoolBuilder;
 use load::load_blueprint_file;
 use logger::init_logger;
 
+use crate::load::Data;
 use crate::save::save_blueprint_file;
 
 fn main() {
@@ -36,15 +33,13 @@ fn main() {
 
     // Limit parallelism to 5 threads for file loading and accumulation
     let limited_pool = ThreadPoolBuilder::new().num_threads(3).build().unwrap();
-    let accumulator: HashMap<Vec<u8>, Vec<u64>> = limited_pool.install(|| {
+    let accumulator: HashMap<Vec<u8>, Vec<u32>> = limited_pool.install(|| {
         blueprint_snapshot_filepaths
             .par_iter()
             .map(|filepath| {
                 let blueprint: HashMap<Vec<u8>, Vec<u16>> = load_blueprint_file(filepath);
-                blueprint.into_iter().map(|(key, values)| {
-                    let values_u64: Vec<u64> = values.into_iter().map(|v| v as u64).collect();
-                    (key, values_u64)
-                }).collect::<HashMap<_, _>>()
+                let blueprint_converted: HashMap<Vec<u8>, Vec<u32>> = blueprint.into_iter().map(|(key, value)| (key, value.into_iter().map(|v| v as u32).collect())).collect();
+                return blueprint_converted;
             })
             .reduce(
                 || HashMap::new(),
@@ -64,19 +59,21 @@ fn main() {
 
     // Increase parallelism for normalization
     let max_pool = ThreadPoolBuilder::new().num_threads(num_cpus::get()).build().unwrap();
-    let averaged_blueprint: HashMap<Vec<u8>, Vec<u16>> = max_pool.install(|| {
-        accumulator.into_par_iter().map(|(key, sums)| {
-            let total = sums.iter().sum::<u64>();
-            let averages = sums.iter()
-                .map(|&sum| {
-                    ((sum * 10_000 / total)) as u16
-                })
-                .collect();
-            (key, averages)
-        }).collect()
-    });
+    let averaged_blueprint = Data {
+        map: max_pool.install(|| {
+            accumulator.into_par_iter().map(|(key, sums)| {
+                let total = sums.iter().sum::<u32>();
+                let averages = sums.iter()
+                    .map(|&sum| {
+                        ((sum * 10_000 / total)) as u16
+                    })
+                    .collect();
+                (key, averages)
+            }).collect()
+        })
+    };
 
-    log::info!("Computed average blueprint, it has {} keys", averaged_blueprint.len());
+    log::info!("Computed average blueprint, it has {} keys", averaged_blueprint.map.len());
 
     save_blueprint_file(&averaged_blueprint, "./exports/averaged_blueprint.bin");
 
