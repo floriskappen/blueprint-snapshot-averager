@@ -67,7 +67,7 @@ fn main() {
 
     log::info!("Computed average blueprint, it has {} keys", averaged_blueprint.map.len());
 
-    save_blueprint_file(&averaged_blueprint, "./exports/averaged_blueprint.bin");
+    save_blueprint_file(averaged_blueprint, "./exports");
 
     log::info!("Saved average blueprint file")
 }
