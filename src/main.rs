@@ -39,20 +39,20 @@ fn main() {
     let mut accumulator: HashMap<Vec<u8>, Vec<u32>> = HashMap::new();
     for filepath in blueprint_snapshot_filepaths {
         log::info!("Loading {}", &filepath);
-        let blueprint: HashMap<Vec<u8>, Vec<u16>> = load_blueprint_file(&filepath);
+        let blueprint_tuples = load_blueprint_file(&filepath);
         log::info!("Loaded {}", &filepath);
-        for (key, value) in blueprint.into_iter() {
-            accumulator.entry(key).or_insert_with(|| vec![0; value.len()])
-                .iter_mut()
+
+        blueprint_tuples.into_iter().for_each(|(key, value)| {
+            let entry = accumulator.entry(key).or_insert_with(|| vec![0; value.len()]);
+            entry.iter_mut()
                 .zip(value.iter())
                 .for_each(|(acc, &val)| *acc += val as u32);
-        }
+        });
         log::info!("Added {} to accumulator", &filepath);
     }
 
     log::info!("Loaded {} blueprint snapshots", blueprint_snapshot_count);
 
-    // Increase parallelism for normalization
     let averaged_blueprint = BlueprintPublic {
         map: accumulator.into_par_iter().map(|(key, sums)| {
             let total = sums.iter().sum::<u32>();
