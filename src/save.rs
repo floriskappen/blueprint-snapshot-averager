@@ -6,7 +6,7 @@ use crate::BlueprintPublic;
 
 #[derive(Serialize, Deserialize)]
 pub struct BlueprintTuples {
-    pub data: Vec<(Vec<u8>, Vec<u16>)>,
+    pub data: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
 pub fn save_blueprint_file(blueprint: BlueprintPublic, output_folder: &str) {
@@ -17,8 +17,8 @@ pub fn save_blueprint_file(blueprint: BlueprintPublic, output_folder: &str) {
     let items_per_chunk = (total_items + 47) / 48; // Ensure ceiling division
     
     // Split the Vec into chunks
-    let mut chunks: Vec<Vec<(Vec<u8>, Vec<u16>)>> = Vec::with_capacity(48);
-    let mut current_chunk: Vec<(Vec<u8>, Vec<u16>)> = Vec::with_capacity(items_per_chunk);
+    let mut chunks: Vec<Vec<(Vec<u8>, Vec<u8>)>> = Vec::with_capacity(48);
+    let mut current_chunk: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity(items_per_chunk);
     let mut count = 0;
 
     for (key, value) in blueprint.map.into_iter() {

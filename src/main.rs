@@ -14,7 +14,7 @@ use crate::save::save_blueprint_file;
 
 #[derive(Serialize, Deserialize)]
 pub struct BlueprintPublic {
-    pub map: HashMap<Vec<u8>, Vec<u16>>
+    pub map: HashMap<Vec<u8>, Vec<u8>>
 }
 
 fn main() {
@@ -58,7 +58,7 @@ fn main() {
             let total = sums.iter().sum::<u32>();
             let averages = sums.iter()
                 .map(|&sum| {
-                    ((sum * 10_000 / total)) as u16
+                    ((sum * 100 / total)) as u8
                 })
                 .collect();
             (key, averages)
