@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct BlueprintTuples {
-    pub data: Vec<(Vec<u8>, Vec<u16>)>,
+    pub data: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
-pub fn load_blueprint_file(filepath: &str) -> Vec<(Vec<u8>, Vec<u16>)> {
+pub fn load_blueprint_file(filepath: &str) -> Vec<(Vec<u8>, Vec<u8>)> {
     let file = File::open(filepath).expect("error opening file");
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
     log::info!("Opened & memmapped file");
