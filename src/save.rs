@@ -2,50 +2,32 @@ use std::{fs::File, io::Write};
 
 use serde::{Deserialize, Serialize};
 
-use crate::BlueprintPublic;
+use crate::{BlueprintPublic, ROUND};
+
+pub const MAX_AVAILABLE_ACTIONS: usize = 8;
+
+type BlueprintTuples = Vec<(Vec<u8>, [u8; MAX_AVAILABLE_ACTIONS])>;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlueprintTuples {
-    pub data: Vec<(Vec<u8>, Vec<u8>)>,
+pub struct BlueprintSerde {
+    pub data: BlueprintTuples,
 }
 
-pub fn save_blueprint_file(blueprint: BlueprintPublic, output_folder: &str) {
-    // Get the total number of items in the Vec
-    let total_items = blueprint.map.len();
-    
-    // Calculate the number of items per chunk
-    let items_per_chunk = (total_items + 47) / 48; // Ensure ceiling division
-    
-    // Split the Vec into chunks
-    let mut chunks: Vec<Vec<(Vec<u8>, Vec<u8>)>> = Vec::with_capacity(48);
-    let mut current_chunk: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity(items_per_chunk);
-    let mut count = 0;
-
-    for (key, value) in blueprint.map.into_iter() {
-        current_chunk.push((key, value));
-        count += 1;
-        if count == items_per_chunk {
-            chunks.push(current_chunk);
-            current_chunk = Vec::with_capacity(items_per_chunk);
-            count = 0;
-        }
-    }
-
-    // Add the last chunk if it contains any items
-    if !current_chunk.is_empty() {
-        chunks.push(current_chunk);
-    }
-
-    // Ensure we have exactly 48 chunks, even if some are empty
-    while chunks.len() < 48 {
-        chunks.push(Vec::with_capacity(items_per_chunk));
-    }
-
+pub fn save_blueprint_file(blueprint: BlueprintPublic, output_folder: &str, hand_index: usize) {
     // Serialize and save each chunk
-    for (i, chunk) in chunks.into_iter().enumerate() {
-        let chunk_blueprint = BlueprintTuples { data: chunk };
-        let encoded: Vec<u8> = bincode::serialize(&chunk_blueprint).unwrap();
-        let mut file = File::create(format!("{}/averaged_blueprint_chunk_{}.bin", output_folder, i)).expect("Error creating output file");
-        file.write_all(&encoded).expect("Error writing to output file");
-    }
+    let tuples: BlueprintTuples = blueprint.map
+        .into_iter()
+        .map(|(key, value)| {
+            let mut value_array = [0; MAX_AVAILABLE_ACTIONS];
+            for (i, num) in value.into_iter().enumerate() {
+                value_array[i] = num
+            };
+            return (key, value_array);
+        })
+        .collect();
+
+    let blueprint_serde = BlueprintSerde { data: tuples };
+    let encoded: Vec<u8> = bincode::serialize(&blueprint_serde).unwrap();
+    let mut file = File::create(format!("{}/averaged_round_{}_hand_{}.bin", output_folder, ROUND, hand_index)).expect("Error creating output file");
+    file.write_all(&encoded).expect("Error writing to output file");
 }
