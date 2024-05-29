@@ -2,7 +2,9 @@ use std::fs::File;
 use memmap2::MmapOptions;
 use serde::{Deserialize, Serialize};
 
-type BlueprintTuplesData = Vec<(Vec<u8>, [u8; 10])>;
+pub const MAX_AVAILABLE_ACTIONS: usize = 10;
+
+pub type BlueprintTuplesData = Vec<(Vec<u8>, [u8; MAX_AVAILABLE_ACTIONS])>;
 #[derive(Serialize, Deserialize)]
 pub struct BlueprintTuples {
     pub data: BlueprintTuplesData,
