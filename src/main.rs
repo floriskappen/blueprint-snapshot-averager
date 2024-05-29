@@ -119,7 +119,10 @@ fn main() {
                 let total = sums.iter().sum::<u16>();
                 let averages = sums.iter()
                     .map(|&sum| {
-                        ((sum * 100 / total)) as u8
+                        if sum == 0 {
+                            return 0
+                        }
+                        return ((sum * 100 / total)) as u8
                     })
                     .collect();
                 (key, averages)
