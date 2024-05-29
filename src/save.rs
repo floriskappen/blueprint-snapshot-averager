@@ -2,7 +2,7 @@ use std::{fs::File, io::Write};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BlueprintPublic, ROUND};
+use crate::BlueprintPublic;
 
 pub const MAX_AVAILABLE_ACTIONS: usize = 8;
 
@@ -13,7 +13,7 @@ pub struct BlueprintSerde {
     pub data: BlueprintTuples,
 }
 
-pub fn save_blueprint_file(blueprint: BlueprintPublic, output_folder: &str, hand_index: usize) {
+pub fn save_blueprint_file(blueprint: BlueprintPublic, filepath: String) {
     // Serialize and save each chunk
     let tuples: BlueprintTuples = blueprint.map
         .into_iter()
@@ -28,6 +28,6 @@ pub fn save_blueprint_file(blueprint: BlueprintPublic, output_folder: &str, hand
 
     let blueprint_serde = BlueprintSerde { data: tuples };
     let encoded: Vec<u8> = bincode::serialize(&blueprint_serde).unwrap();
-    let mut file = File::create(format!("{}/averaged_round_{}_hand_{}.bin", output_folder, ROUND, hand_index)).expect("Error creating output file");
+    let mut file = File::create(filepath).expect("Error creating output file");
     file.write_all(&encoded).expect("Error writing to output file");
 }

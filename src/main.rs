@@ -28,7 +28,7 @@ fn main() {
         .filter_map(|entry| {
             entry.ok().and_then(|e| {
                 let path = e.path();
-                if path.extension().and_then(std::ffi::OsStr::to_str) == Some("bin") {
+                if path.is_dir() {
                     Some(path.to_str().unwrap().to_string())
                 } else {
                     None
@@ -36,8 +36,9 @@ fn main() {
             })
         })
         .collect();
+    println!("blueprint_snapshot_folders: {:?}", blueprint_snapshot_folders);
 
-    // Sort the snapshots numerically, this is necessary because we might want to weigh certain snapshots more than others
+    // Sort the snapshot folders numerically, this is necessary because we might want to weigh certain snapshots more than others
     let re = Regex::new(r"snapshot_(\d+)_").unwrap();
     blueprint_snapshot_folders.sort_by(|a, b| {
         let a_caps = re.captures(a).unwrap();
@@ -51,13 +52,50 @@ fn main() {
 
     log::info!("Loaded snapshot folders: {:?}", blueprint_snapshot_folders);
 
-    let mut current_hand_index = 0;
-    loop {
-        log::info!("Averaging hand {}", current_hand_index);
+    let mut files_per_snapshot_folder: Vec<Vec<String>> = Vec::with_capacity(blueprint_snapshot_folders.len());
+    for folder in blueprint_snapshot_folders {
+        let mut snapshot_folder_files: Vec<String> = fs::read_dir(folder)
+            .unwrap()
+            .filter_map(|entry| {
+                entry.ok().and_then(|e| {
+                    let path = e.path();
+                    if path.extension().and_then(std::ffi::OsStr::to_str) == Some("bin") {
+                        Some(path.to_str().unwrap().to_string())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        snapshot_folder_files.sort_by(|a, b| {
+            let a_caps = re.captures(a).unwrap();
+            let b_caps = re.captures(b).unwrap();
+    
+            let a_num: u32 = a_caps[1].parse().unwrap();
+            let b_num: u32 = b_caps[1].parse().unwrap();
+    
+            a_num.cmp(&b_num)
+        });
+
+        files_per_snapshot_folder.push(snapshot_folder_files);
+    }
+
+
+    let max_len = files_per_snapshot_folder.iter().map(|v| v.len()).max().unwrap_or(0);
+    let mut snapshots_per_hand:Vec<Vec<String>> = vec![Vec::new(); max_len];
+    for files in files_per_snapshot_folder {
+        for (i, value) in files.into_iter().enumerate() {
+            snapshots_per_hand[i].push(value)
+        }
+    }
+
+    println!("snapshots_per_hand: {:?}", snapshots_per_hand);
+
+    for (i, hand_snapshots) in snapshots_per_hand.into_iter().enumerate() {
         let mut accumulator: HashMap<Vec<u8>, Vec<u16>> = HashMap::new();
-        let mut hand_snapshots = 0;
-        for (i, snapshot_folder) in blueprint_snapshot_folders.iter().enumerate() {
-            let filepath = format!("{}/round_{}_hand_{}", snapshot_folder, ROUND, current_hand_index);
+        let hand_filename = Path::new(&hand_snapshots[0]).file_name().unwrap().to_str().unwrap();
+        for filepath in hand_snapshots.clone() {
             let path = Path::new(&filepath);
             if path.exists() {
                 let blueprint_tuples = load_blueprint_file(&filepath);
@@ -73,12 +111,7 @@ fn main() {
                             }
                         });
                 });
-                hand_snapshots += 1;
             }
-        }
-
-        if hand_snapshots == 0 {
-            break;
         }
 
         let averaged_blueprint = BlueprintPublic {
@@ -93,11 +126,10 @@ fn main() {
             }).collect()
         };
 
+
         log::info!("Computed average blueprint, it has {} keys", averaged_blueprint.map.len());
 
-        save_blueprint_file(averaged_blueprint, "./exports", current_hand_index);
+        save_blueprint_file(averaged_blueprint, format!("./exports/{}", hand_filename));
         log::info!("Saved average blueprint file");
-
-        current_hand_index += 1;
     }
 }
