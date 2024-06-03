@@ -79,30 +79,37 @@ fn main() {
         });
 
         let mut i = 0;
+        let mut j = 0;
         let mut all_files = Vec::new();
         while i < snapshot_folder_files.len() {
             if files_per_snapshot_folder.len() > 0 {
                 let current_file_name = Path::new(&snapshot_folder_files[i]).file_name().unwrap().to_str().unwrap();
-                let filename = files_per_snapshot_folder[0][i].clone().unwrap();
-                let ground_truth_file_name = Path::new(
-                    &filename
-                )
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap();
 
-                if current_file_name == ground_truth_file_name {
-                    all_files.push(Some(snapshot_folder_files[i].clone()))
-                } else {
+                if files_per_snapshot_folder[0].len() >= j {
                     all_files.push(None);
-                    i -= 1;
+                } else {
+                    let filename = files_per_snapshot_folder[0][j].clone().unwrap();
+                    let ground_truth_file_name = Path::new(
+                        &filename
+                    )
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap();
+    
+                    if current_file_name == ground_truth_file_name {
+                        all_files.push(Some(snapshot_folder_files[i].clone()))
+                    } else {
+                        all_files.push(None);
+                        i -= 1;
+                    }
                 }
             } else {
                 all_files.push(Some(snapshot_folder_files[i].clone()));
             }
 
-            i+= 1;
+            i += 1;
+            j += 1;
         }
         files_per_snapshot_folder.push(all_files);
     }
