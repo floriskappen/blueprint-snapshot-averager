@@ -83,10 +83,23 @@ fn main() {
 
 
     let max_len = files_per_snapshot_folder.iter().map(|v| v.len()).max().unwrap_or(0);
-    let mut snapshots_per_hand:Vec<Vec<String>> = vec![Vec::new(); max_len];
-    for files in files_per_snapshot_folder {
+    let mut snapshots_per_hand:Vec<Vec<Option<String>>> = vec![Vec::new(); max_len];
+    for files in files_per_snapshot_folder.iter() {
         for (i, value) in files.into_iter().enumerate() {
-            snapshots_per_hand[i].push(value)
+            let current_file_name = Path::new(&value).file_name().unwrap().to_str().unwrap();
+            let ground_truth_file_name = Path::new(
+                &files_per_snapshot_folder[0][i]
+            )
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap();
+
+            if current_file_name == ground_truth_file_name {
+                snapshots_per_hand[i].push(Some(value.clone()))
+            } else {
+                snapshots_per_hand[i].push(None)
+            }
         }
     }
 
@@ -94,23 +107,26 @@ fn main() {
 
     for (i, hand_snapshots) in snapshots_per_hand.into_iter().enumerate() {
         let mut accumulator: HashMap<Vec<u8>, Vec<u16>> = HashMap::new();
-        let hand_filename = Path::new(&hand_snapshots[0]).file_name().unwrap().to_str().unwrap();
-        for filepath in hand_snapshots.clone() {
-            let path = Path::new(&filepath);
-            if path.exists() {
-                let blueprint_tuples = load_blueprint_file(&filepath);
-                log::info!("Loaded {}", filepath);
-                blueprint_tuples.into_iter().for_each(|(key, value)| {
-                    let entry = accumulator.entry(key).or_insert_with(|| vec![0; value.len()]);
-                    entry.iter_mut()
-                        .zip(value.iter())
-                        .for_each(|(acc, &val)| {
-                            // Snapshot >10 should weigh 5x as much
-                            if i > 10 {
-                                *acc += val as u16 * 5
-                            }
-                        });
-                });
+        let first_filepath = hand_snapshots[0].clone().unwrap();
+        let hand_filename = Path::new(&first_filepath).file_name().unwrap().to_str().unwrap();
+        for filepath_option in hand_snapshots.clone() {
+            if let Some(filepath) = filepath_option {
+                let path = Path::new(&filepath);
+                if path.exists() {
+                    let blueprint_tuples = load_blueprint_file(&filepath);
+                    log::info!("Loaded {}", filepath);
+                    blueprint_tuples.into_iter().for_each(|(key, value)| {
+                        let entry = accumulator.entry(key).or_insert_with(|| vec![0; value.len()]);
+                        entry.iter_mut()
+                            .zip(value.iter())
+                            .for_each(|(acc, &val)| {
+                                // Snapshot >10 should weigh 5x as much
+                                if i > 10 {
+                                    *acc += val as u16 * 5
+                                }
+                            });
+                    });
+                }
             }
         }
 
