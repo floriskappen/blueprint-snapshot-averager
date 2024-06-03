@@ -52,7 +52,7 @@ fn main() {
 
     log::info!("Loaded snapshot folders: {:?}", blueprint_snapshot_folders);
 
-    let mut files_per_snapshot_folder: Vec<Vec<String>> = Vec::with_capacity(blueprint_snapshot_folders.len());
+    let mut files_per_snapshot_folder: Vec<Vec<Option<String>>> = Vec::with_capacity(blueprint_snapshot_folders.len());
     for folder in blueprint_snapshot_folders {
         let mut snapshot_folder_files: Vec<String> = fs::read_dir(folder)
             .unwrap()
@@ -78,7 +78,33 @@ fn main() {
             a_num.cmp(&b_num)
         });
 
-        files_per_snapshot_folder.push(snapshot_folder_files);
+        let mut i = 0;
+        let mut all_files = Vec::new();
+        while i < snapshot_folder_files.len() {
+            if files_per_snapshot_folder.len() > 0 {
+                let current_file_name = Path::new(&snapshot_folder_files[i]).file_name().unwrap().to_str().unwrap();
+                let filename = files_per_snapshot_folder[0][i].clone().unwrap();
+                let ground_truth_file_name = Path::new(
+                    &filename
+                )
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap();
+
+                if current_file_name == ground_truth_file_name {
+                    all_files.push(Some(snapshot_folder_files[i].clone()))
+                } else {
+                    all_files.push(None);
+                    i -= 1;
+                }
+            } else {
+                all_files.push(Some(snapshot_folder_files[i].clone()));
+            }
+
+            i+= 1;
+        }
+        files_per_snapshot_folder.push(all_files);
     }
 
 
@@ -86,20 +112,7 @@ fn main() {
     let mut snapshots_per_hand:Vec<Vec<Option<String>>> = vec![Vec::new(); max_len];
     for files in files_per_snapshot_folder.iter() {
         for (i, value) in files.into_iter().enumerate() {
-            let current_file_name = Path::new(&value).file_name().unwrap().to_str().unwrap();
-            let ground_truth_file_name = Path::new(
-                &files_per_snapshot_folder[0][i]
-            )
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap();
-
-            if current_file_name == ground_truth_file_name {
-                snapshots_per_hand[i].push(Some(value.clone()))
-            } else {
-                snapshots_per_hand[i].push(None)
-            }
+            snapshots_per_hand[i].push(value.clone())
         }
     }
 
