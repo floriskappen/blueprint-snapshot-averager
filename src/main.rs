@@ -85,7 +85,7 @@ fn main() {
             if files_per_snapshot_folder.len() > 0 {
                 let current_file_name = Path::new(&snapshot_folder_files[i]).file_name().unwrap().to_str().unwrap();
 
-                if files_per_snapshot_folder[0].len() >= j {
+                if files_per_snapshot_folder[0].len() <= j {
                     all_files.push(None);
                 } else {
                     let filename = files_per_snapshot_folder[0][j].clone().unwrap();
