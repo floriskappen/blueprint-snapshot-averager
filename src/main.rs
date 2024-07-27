@@ -120,7 +120,7 @@ fn main() {
 
     println!("snapshots_per_hand: {:?}", snapshots_per_hand);
 
-    for (i, hand_snapshots) in snapshots_per_hand.into_iter().enumerate() {
+    for (_, hand_snapshots) in snapshots_per_hand.into_iter().enumerate() {
         let mut accumulator: HashMap<Vec<u8>, Vec<u16>> = HashMap::new();
         let first_filepath = hand_snapshots[0].clone().unwrap();
         let hand_filename = Path::new(&first_filepath).file_name().unwrap().to_str().unwrap();
@@ -135,10 +135,7 @@ fn main() {
                         entry.iter_mut()
                             .zip(value.iter())
                             .for_each(|(acc, &val)| {
-                                // Snapshot >10 should weigh 5x as much
-                                if i > 10 {
-                                    *acc += val as u16 * 5
-                                }
+                                *acc += val as u16
                             });
                     });
                 }
