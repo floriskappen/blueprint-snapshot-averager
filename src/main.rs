@@ -3,22 +3,17 @@ pub mod save;
 pub mod logger;
 
 use std::{collections::HashMap, fs, path::Path};
+use load::BlueprintTuples;
+use load::MAX_AVAILABLE_ACTIONS;
 use rayon::prelude::*;
 
 use load::load_blueprint_file;
 use logger::init_logger;
 use regex::Regex;
-use serde::Deserialize;
-use serde::Serialize;
 
 use crate::save::save_blueprint_file;
 
 pub const ROUND: usize = 1;
-
-#[derive(Serialize, Deserialize)]
-pub struct BlueprintPublic {
-    pub map: HashMap<Vec<u8>, Vec<u8>>
-}
 
 fn main() {
     init_logger().expect("Failed to initialize logger");
@@ -150,9 +145,11 @@ fn main() {
             }
         }
 
-        let averaged_blueprint = BlueprintPublic {
-            map: accumulator.into_par_iter().map(|(key, sums)| {
+        let averaged_blueprint = BlueprintTuples {
+            data: accumulator.into_par_iter().map(|(key, sums)| {
                 let total = sums.iter().sum::<u16>();
+                let mut value_array = [0; MAX_AVAILABLE_ACTIONS];
+
                 let averages = sums.iter()
                     .map(|&sum| {
                         if sum == 0 {
@@ -160,13 +157,16 @@ fn main() {
                         }
                         return ((sum * 100 / total)) as u8
                     })
-                    .collect();
-                (key, averages)
+                    .collect::<Vec<u8>>();
+
+                for (i, num) in averages.into_iter().enumerate() {
+                    value_array[i] = num
+                };
+                (key, value_array)
             }).collect()
         };
 
-
-        log::info!("Computed average blueprint, it has {} keys", averaged_blueprint.map.len());
+        log::info!("Computed average blueprint, it has {} keys", averaged_blueprint.data.len());
 
         save_blueprint_file(averaged_blueprint, format!("./exports/{}", hand_filename));
         log::info!("Saved average blueprint file");
